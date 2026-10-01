@@ -1,0 +1,13 @@
+[project]
+name = "coffeemail-runner-python"
+version = "1.0.0"
+description = "Runner FastAPI para o CoffeeMail Python SDK no Workbench"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "coffeemail",
+]
+
+[tool.uv.sources]
+coffeemail = { path = "../../../coffee-mail-sdk-python", editable = true }

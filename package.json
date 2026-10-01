@@ -5,8 +5,9 @@
   "description": "Monorepo para testes e validação multi-linguagem de SDKs do CoffeeMail seguindo Spec-Driven Development",
   "scripts": {
     "dev:backend": "pnpm --filter @coffeemail/runner-node dev",
+    "dev:runner-python": "pnpm --filter @coffeemail/runner-python dev",
     "dev:web": "pnpm --filter @coffeemail/workbench-web dev",
-    "dev": "pnpm --parallel --filter @coffeemail/runner-node --filter @coffeemail/workbench-web dev",
+    "dev": "pnpm --parallel --filter @coffeemail/runner-node --filter @coffeemail/runner-python --filter @coffeemail/workbench-web dev",
     "build": "pnpm --recursive run build",
     "test": "pnpm --recursive run test",
     "typecheck": "pnpm --recursive run typecheck"

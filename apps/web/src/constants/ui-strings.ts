@@ -94,7 +94,7 @@ export const UI_STRINGS = {
 
 export const DEFAULT_RUNNERS = [
   { id: "node", label: "Node.js Runner (Porta 4001)", url: "http://localhost:4001" },
-  { id: "python", label: "Python Runner (Porta 4002 - Planejado)", url: "http://localhost:4002" },
+  { id: "python", label: "Python Runner (Porta 4002)", url: "http://localhost:4002" },
   { id: "go", label: "Go Runner (Porta 4003 - Planejado)", url: "http://localhost:4003" },
 ] as const;
 
