@@ -1,0 +1,411 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CoffeeMail SDK Runner Specification API",
+    "version": "1.0.0",
+    "description": "Especificação formal do contrato unificado para execução e teste de SDKs do CoffeeMail."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4001",
+      "description": "Runner Node.js Local"
+    },
+    {
+      "url": "http://localhost:4002",
+      "description": "Runner Python Local (Futuro)"
+    },
+    {
+      "url": "http://localhost:4003",
+      "description": "Runner Go Local (Futuro)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-coffeemail-api-key"
+      }
+    },
+    "schemas": {
+      "RunnerInfo": {
+        "type": "object",
+        "required": ["language", "runtime", "sdkVersion", "status"],
+        "properties": {
+          "language": { "type": "string" },
+          "runtime": { "type": "string" },
+          "sdkVersion": { "type": "string" },
+          "status": { "type": "string", "enum": ["online", "degraded", "offline"] }
+        }
+      },
+      "StandardResponse": {
+        "type": "object",
+        "required": ["success", "runner", "executionTimeMs"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "runner": { "$ref": "#/components/schemas/RunnerInfo" },
+          "executionTimeMs": { "type": "number" },
+          "data": { "type": "object", "nullable": true },
+          "error": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "status": { "type": "number" },
+              "details": { "type": "object", "nullable": true }
+            }
+          }
+        }
+      },
+      "SendEmailRequest": {
+        "type": "object",
+        "required": ["from", "to", "subject"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } }
+            ]
+          },
+          "subject": { "type": "string" },
+          "html": { "type": "string" },
+          "text": { "type": "string" },
+          "replyTo": { "type": "string" }
+        }
+      },
+      "CreateDomainRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" }
+        }
+      },
+      "CreateTemplateRequest": {
+        "type": "object",
+        "required": ["name", "subject", "html"],
+        "properties": {
+          "name": { "type": "string" },
+          "subject": { "type": "string" },
+          "html": { "type": "string" },
+          "format": { "type": "string", "enum": ["html", "markdown"] }
+        }
+      },
+      "CreateAudienceRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      },
+      "CreateContactRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": {
+          "email": { "type": "string" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" }
+        }
+      },
+      "CreateSuppressionRequest": {
+        "type": "object",
+        "required": ["email", "reason"],
+        "properties": {
+          "email": { "type": "string" },
+          "reason": { "type": "string", "enum": ["unsubscribe", "bounce", "complaint", "manual"] }
+        }
+      },
+      "CreateWebhookRequest": {
+        "type": "object",
+        "required": ["url", "events"],
+        "properties": {
+          "url": { "type": "string" },
+          "events": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/runner/info": {
+      "get": {
+        "summary": "Obtém metadados do Runner ativo",
+        "responses": {
+          "200": {
+            "description": "Metadados do Runner",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/client/introspect": {
+      "post": {
+        "summary": "Executa introspecção da API Key fornecida",
+        "responses": {
+          "200": {
+            "description": "Dados da chave introspectada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/emails/send": {
+      "post": {
+        "summary": "Envia um e-mail transacional via SDK",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SendEmailRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resultado do envio",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/emails": {
+      "get": {
+        "summary": "Lista e-mails enviados com paginação",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listagem paginada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/domains": {
+      "get": {
+        "summary": "Lista domínios cadastrados",
+        "responses": {
+          "200": {
+            "description": "Lista de domínios",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Cadastra um novo domínio via SDK",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateDomainRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Domínio criado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "summary": "Lista modelos de e-mail com paginação",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Modelos retornados",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Cria um novo template",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTemplateRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Template criado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audiences": {
+      "get": {
+        "summary": "Lista audiências cadastradas",
+        "responses": {
+          "200": {
+            "description": "Audiências retornadas",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Cria uma nova audiência",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateAudienceRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Audiência criada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suppressions": {
+      "get": {
+        "summary": "Lista e-mails suprimidos com paginação",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de supressões",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Adiciona um e-mail à lista de supressão",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSuppressionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Supressão criada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/webhooks": {
+      "get": {
+        "summary": "Lista webhooks cadastrados",
+        "responses": {
+          "200": {
+            "description": "Lista de webhooks",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Cadastra um novo webhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateWebhookRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook cadastrado",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "summary": "Retorna métricas e taxas de entrega",
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string" } },
+          { "name": "to", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Estatísticas agregadas",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StandardResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

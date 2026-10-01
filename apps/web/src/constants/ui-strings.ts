@@ -1,0 +1,105 @@
+export const UI_STRINGS = {
+  APP_TITLE: "CoffeeMail SDK Workbench",
+  APP_SUBTITLE: "Bancada para testes e validação multi-linguagem de SDKs via Spec-Driven Development",
+  HEADER: {
+    RUNNER_SELECT_LABEL: "SDK Runner Ativo:",
+    API_KEY_LABEL: "Chave do CoffeeMail (API Key):",
+    API_KEY_PLACEHOLDER: "cm_live_... ou cm_test_...",
+    STATUS_ONLINE: "Runner Conectado",
+    STATUS_OFFLINE: "Runner Desconectado",
+    CHECK_CONNECTION_BUTTON: "Testar Conexão",
+  },
+  TABS: {
+    INTROSPECT: "Introspecção",
+    EMAILS: "E-mails",
+    DOMAINS: "Domínios",
+    TEMPLATES: "Modelos",
+    AUDIENCES: "Audiências e Contatos",
+    SUPPRESSIONS: "Supressões",
+    WEBHOOKS: "Webhooks",
+    STATS: "Estatísticas",
+  },
+  COMMON: {
+    SUBMIT: "Executar no SDK",
+    REFRESH: "Atualizar Lista",
+    LOADING: "Executando operação via SDK...",
+    EMPTY_LIST: "Nenhum registro encontrado.",
+    SUCCESS_BADGE: "Sucesso",
+    ERROR_BADGE: "Falha",
+    EXECUTION_TIME: "Tempo de execução:",
+    RUNNER_BADGE: "Runner:",
+    RESPONSE_TITLE: "Retorno da Operação (SDK Payload)",
+    REQUIRED_FIELD: "Campo obrigatório",
+  },
+  EMAILS: {
+    TITLE: "Teste de E-mails Transacionais",
+    FROM_LABEL: "Remetente (From):",
+    TO_LABEL: "Destinatário (To):",
+    SUBJECT_LABEL: "Assunto (Subject):",
+    HTML_LABEL: "Corpo HTML:",
+    LIST_TITLE: "Histórico Recente de E-mails",
+  },
+  DOMAINS: {
+    TITLE: "Gerenciamento e Verificação de Domínios",
+    NAME_LABEL: "Nome do Domínio (ex: empresa.com.br):",
+    LIST_TITLE: "Domínios Cadastrados",
+    VERIFY_BUTTON: "Verificar DNS",
+    HEALTH_BUTTON: "Checar Saúde",
+  },
+  TEMPLATES: {
+    TITLE: "Gestão e Renderização de Templates",
+    NAME_LABEL: "Nome do Modelo:",
+    SUBJECT_LABEL: "Assunto Padrão:",
+    HTML_LABEL: "Conteúdo HTML:",
+    PREVIEW_BUTTON: "Pré-visualizar",
+    LIST_TITLE: "Modelos Existentes",
+  },
+  AUDIENCES: {
+    TITLE: "Audiências e Listas de Contatos",
+    AUDIENCE_NAME_LABEL: "Nome da Audiência:",
+    CONTACT_EMAIL_LABEL: "E-mail do Contato:",
+    CONTACT_FIRST_NAME_LABEL: "Nome:",
+    CONTACT_LAST_NAME_LABEL: "Sobrenome:",
+    ADD_CONTACT_BUTTON: "Adicionar Contato",
+    LIST_TITLE: "Audiências Cadastradas",
+    CONTACTS_LIST_TITLE: "Contatos da Audiência",
+  },
+  SUPPRESSIONS: {
+    TITLE: "Lista de Supressão (Descadastros e Bounces)",
+    EMAIL_LABEL: "E-mail:",
+    REASON_LABEL: "Motivo:",
+    REASONS: {
+      UNSUBSCRIBE: "Descadastro (Unsubscribe)",
+      BOUNCE: "Bounce",
+      COMPLAINT: "Reclamação (Spam)",
+      MANUAL: "Manual",
+    },
+    DELETE_BUTTON: "Remover da Supressão",
+    LIST_TITLE: "E-mails Suprimidos",
+  },
+  WEBHOOKS: {
+    TITLE: "Configuração e Teste de Webhooks",
+    URL_LABEL: "URL de Destino (Endpoint):",
+    EVENTS_LABEL: "Eventos (separados por vírgula):",
+    TEST_BUTTON: "Disparar Teste",
+    LIST_TITLE: "Webhooks Ativos",
+  },
+  STATS: {
+    TITLE: "Estatísticas de Entregabilidade",
+    DATE_FROM_LABEL: "Data Inicial (ISO):",
+    DATE_TO_LABEL: "Data Final (ISO):",
+    CONSULT_BUTTON: "Consultar Métricas",
+  },
+} as const;
+
+export const DEFAULT_RUNNERS = [
+  { id: "node", label: "Node.js Runner (Porta 4001)", url: "http://localhost:4001" },
+  { id: "python", label: "Python Runner (Porta 4002 - Planejado)", url: "http://localhost:4002" },
+  { id: "go", label: "Go Runner (Porta 4003 - Planejado)", url: "http://localhost:4003" },
+] as const;
+
+export const STORAGE_KEYS = {
+  API_KEY: "coffeemail_workbench_api_key",
+  RUNNER_URL: "coffeemail_workbench_runner_url",
+} as const;
+

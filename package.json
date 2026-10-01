@@ -1,0 +1,22 @@
+{
+  "name": "coffee-mail-sdk-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo para testes e validação multi-linguagem de SDKs do CoffeeMail seguindo Spec-Driven Development",
+  "scripts": {
+    "dev:backend": "pnpm --filter @coffeemail/runner-node dev",
+    "dev:web": "pnpm --filter @coffeemail/workbench-web dev",
+    "dev": "pnpm --parallel --filter @coffeemail/runner-node --filter @coffeemail/workbench-web dev",
+    "build": "pnpm --recursive run build",
+    "test": "pnpm --recursive run test",
+    "typecheck": "pnpm --recursive run typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
