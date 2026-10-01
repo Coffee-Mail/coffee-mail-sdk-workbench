@@ -1,14 +1,14 @@
 import platform
 import time
-from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, Header, HTTPException, Query
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from typing import Literal
 
 import coffeemail
 from coffeemail import CoffeeMail
 from coffeemail.core.errors import CoffeeMailError
+from fastapi import FastAPI, Header, HTTPException, Query, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 app = FastAPI(title="CoffeeMail Python SDK Runner", version="1.0.0")
 
@@ -20,7 +20,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_runner_info() -> Dict[str, str]:
+
+def get_runner_info() -> dict[str, str]:
     return {
         "language": "python",
         "runtime": f"Python {platform.python_version()}",
@@ -28,7 +29,12 @@ def get_runner_info() -> Dict[str, str]:
         "status": "online",
     }
 
-def standard_response(data: Any = None, error: Optional[Dict[str, Any]] = None, start_time: Optional[float] = None) -> Dict[str, Any]:
+
+def standard_response(
+    data: object = None,
+    error: dict[str, object] | None = None,
+    start_time: float | None = None,
+) -> dict[str, object]:
     elapsed_ms = int((time.perf_counter() - start_time) * 1000) if start_time else 0
     return {
         "success": error is None,
@@ -38,7 +44,8 @@ def standard_response(data: Any = None, error: Optional[Dict[str, Any]] = None, 
         "error": error,
     }
 
-def get_client(api_key: Optional[str], base_url: Optional[str] = None) -> CoffeeMail:
+
+def get_client(api_key: str | None, base_url: str | None = None) -> CoffeeMail:
     if not api_key or not api_key.strip():
         raise HTTPException(
             status_code=400,
@@ -46,8 +53,9 @@ def get_client(api_key: Optional[str], base_url: Optional[str] = None) -> Coffee
         )
     return CoffeeMail(api_key=api_key.strip(), base_url=base_url)
 
+
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(_: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=500,
         content=standard_response(
@@ -55,16 +63,18 @@ async def global_exception_handler(request, exc):
         ),
     )
 
+
 @app.get("/api/v1/runner/info")
-def runner_info():
+def runner_info() -> dict[str, object]:
     info = get_runner_info()
     return standard_response(data=info)
 
+
 @app.post("/api/v1/client/introspect")
 def introspect_key(
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     if not x_coffeemail_api_key:
         return standard_response(
@@ -94,27 +104,34 @@ def introspect_key(
             },
             start_time=start,
         )
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(
             error={"code": "INTROSPECT_FAILED", "message": str(exc), "status": 400},
             start_time=start,
         )
 
+
 class SendEmailDTO(BaseModel):
     from_address: str = Field(alias="from")
-    to: Any
+    to: str | list[str]
     subject: str
-    html: Optional[str] = None
-    text: Optional[str] = None
-    replyTo: Optional[str] = None
-    tags: Optional[List[Dict[str, str]]] = None
+    html: str | None = None
+    text: str | None = None
+    replyTo: str | None = None
+    tags: list[dict[str, str]] | None = None
+
 
 @app.post("/api/v1/emails/send")
 def send_email(
     payload: SendEmailDTO,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -134,19 +151,25 @@ def send_email(
             )
         data = {"id": res.data.id, "status": res.data.status, "createdAt": res.data.created_at or time.strftime("%Y-%m-%dT%H:%M:%SZ")}
         return standard_response(data=data, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(
             error={"code": "EMAIL_SEND_FAILED", "message": str(exc), "status": 400},
             start_time=start,
         )
 
+
 @app.get("/api/v1/emails")
 def list_emails(
     page: int = Query(1),
     limit: int = Query(10),
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -171,20 +194,27 @@ def list_emails(
             data={"items": items, "total": len(items), "page": page, "limit": limit, "hasMore": bool(res.data.next_cursor)},
             start_time=start,
         )
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(
             error={"code": "LIST_EMAILS_FAILED", "message": str(exc), "status": 400},
             start_time=start,
         )
 
+
 class CreateDomainDTO(BaseModel):
     name: str
 
+
 @app.get("/api/v1/domains")
 def list_domains(
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -199,15 +229,21 @@ def list_domains(
             for d in res.data.domains
         ]
         return standard_response(data=items, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "DOMAINS_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.post("/api/v1/domains")
 def create_domain(
     payload: CreateDomainDTO,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -219,15 +255,21 @@ def create_domain(
             )
         data = {"id": res.data.id, "name": res.data.name, "status": res.data.status, "createdAt": res.data.created_at}
         return standard_response(data=data, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "CREATE_DOMAIN_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.post("/api/v1/domains/{domain_id}/verify")
 def verify_domain(
     domain_id: str,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -235,15 +277,21 @@ def verify_domain(
         if res.error or not res.data:
             return standard_response(error={"code": "VERIFY_DOMAIN_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         return standard_response(data=res.data.model_dump(by_alias=True), start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "VERIFY_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.get("/api/v1/domains/{domain_id}/health")
 def domain_health(
     domain_id: str,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -251,16 +299,22 @@ def domain_health(
         if res.error or not res.data:
             return standard_response(error={"code": "HEALTH_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         return standard_response(data=res.data.model_dump(by_alias=True), start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "HEALTH_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.get("/api/v1/templates")
 def list_templates(
     page: int = Query(1),
     limit: int = Query(10),
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -272,21 +326,28 @@ def list_templates(
             for t in res.data.templates
         ]
         return standard_response(data={"items": items, "total": len(items), "page": page, "limit": limit, "hasMore": False}, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "TEMPLATES_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 class CreateTemplateDTO(BaseModel):
     name: str
-    subject: Optional[str] = None
+    subject: str | None = None
     html: str
-    format: Optional[str] = "html"
+    format: str | None = "html"
+
 
 @app.post("/api/v1/templates")
 def create_template(
     payload: CreateTemplateDTO,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -295,15 +356,21 @@ def create_template(
             return standard_response(error={"code": "CREATE_TEMPLATE_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         data = {"id": res.data.id, "name": res.data.name, "subject": res.data.subject, "format": "html", "createdAt": res.data.created_at}
         return standard_response(data=data, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "CREATE_TEMPLATE_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.post("/api/v1/templates/{template_id}/preview")
 def preview_template(
     template_id: str,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -311,14 +378,20 @@ def preview_template(
         if res.error or not res.data:
             return standard_response(error={"code": "PREVIEW_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         return standard_response(data=res.data.model_dump(by_alias=True), start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "PREVIEW_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 @app.get("/api/v1/audiences")
 def list_audiences(
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -330,19 +403,26 @@ def list_audiences(
             for a in res.data.audiences
         ]
         return standard_response(data=items, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "AUDIENCES_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 class CreateAudienceDTO(BaseModel):
     name: str
-    description: Optional[str] = None
+    description: str | None = None
+
 
 @app.post("/api/v1/audiences")
 def create_audience(
     payload: CreateAudienceDTO,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -351,17 +431,23 @@ def create_audience(
             return standard_response(error={"code": "CREATE_AUDIENCE_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         data = {"id": res.data.id, "name": res.data.name, "totalContacts": res.data.total_contacts, "createdAt": res.data.created_at}
         return standard_response(data=data, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "CREATE_AUDIENCE_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.get("/api/v1/audiences/{audience_id}/contacts")
 def list_contacts(
     audience_id: str,
     page: int = Query(1),
     limit: int = Query(10),
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -373,21 +459,28 @@ def list_contacts(
             for c in res.data.contacts
         ]
         return standard_response(data={"items": items, "total": res.data.total or len(items), "page": page, "limit": limit, "hasMore": False}, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "CONTACTS_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 class CreateContactDTO(BaseModel):
     email: str
-    firstName: Optional[str] = None
-    lastName: Optional[str] = None
+    firstName: str | None = None
+    lastName: str | None = None
+
 
 @app.post("/api/v1/audiences/{audience_id}/contacts")
 def create_contact(
     audience_id: str,
     payload: CreateContactDTO,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -397,16 +490,22 @@ def create_contact(
             return standard_response(error={"code": "CREATE_CONTACT_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         data = {"id": res.data.id, "email": res.data.email, "firstName": payload.firstName, "lastName": payload.lastName, "createdAt": res.data.created_at}
         return standard_response(data=data, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "CREATE_CONTACT_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.get("/api/v1/suppressions")
 def list_suppressions(
     page: int = Query(1),
     limit: int = Query(10),
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -418,19 +517,26 @@ def list_suppressions(
             for s in res.data.suppressions
         ]
         return standard_response(data={"items": items, "total": len(items), "page": page, "limit": limit, "hasMore": False}, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "SUPPRESSIONS_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 class CreateSuppressionDTO(BaseModel):
     email: str
-    reason: str = "manual"
+    reason: Literal["bounce", "complaint", "unsubscribe", "manual"] = "manual"
+
 
 @app.post("/api/v1/suppressions")
 def create_suppression(
     payload: CreateSuppressionDTO,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -439,15 +545,21 @@ def create_suppression(
             return standard_response(error={"code": "CREATE_SUPPRESSION_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         data = {"id": res.data.id, "email": res.data.email, "reason": res.data.reason, "createdAt": res.data.created_at}
         return standard_response(data=data, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "CREATE_SUPPRESSION_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.delete("/api/v1/suppressions/{email}")
 def delete_suppression(
     email: str,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -455,14 +567,20 @@ def delete_suppression(
         if res.error:
             return standard_response(error={"code": "DELETE_SUPPRESSION_ERROR", "message": res.error.message, "status": 400}, start_time=start)
         return standard_response(data=True, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "DELETE_SUPPRESSION_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 @app.get("/api/v1/webhooks")
 def list_webhooks(
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -474,19 +592,26 @@ def list_webhooks(
             for w in res.data.webhooks
         ]
         return standard_response(data=items, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "WEBHOOKS_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 class CreateWebhookDTO(BaseModel):
     url: str
-    events: List[str]
+    events: list[str]
+
 
 @app.post("/api/v1/webhooks")
 def create_webhook(
     payload: CreateWebhookDTO,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -495,15 +620,21 @@ def create_webhook(
             return standard_response(error={"code": "CREATE_WEBHOOK_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         data = {"id": res.data.id, "url": res.data.url, "events": res.data.events, "status": "active", "createdAt": res.data.created_at}
         return standard_response(data=data, start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "CREATE_WEBHOOK_FAILED", "message": str(exc), "status": 400}, start_time=start)
+
 
 @app.post("/api/v1/webhooks/{webhook_id}/test")
 def test_webhook(
     webhook_id: str,
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -511,16 +642,22 @@ def test_webhook(
         if res.error or not res.data:
             return standard_response(error={"code": "TEST_WEBHOOK_ERROR", "message": res.error.message if res.error else "Erro", "status": 400}, start_time=start)
         return standard_response(data=res.data.model_dump(by_alias=True), start_time=start)
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
+            start_time=start,
+        )
     except Exception as exc:
         return standard_response(error={"code": "TEST_WEBHOOK_FAILED", "message": str(exc), "status": 400}, start_time=start)
 
+
 @app.get("/api/v1/stats")
 def get_stats(
-    startDate: Optional[str] = Query(None),
-    endDate: Optional[str] = Query(None),
-    x_coffeemail_api_key: Optional[str] = Header(None, alias="x-coffeemail-api-key"),
-    x_coffeemail_base_url: Optional[str] = Header(None, alias="x-coffeemail-base-url"),
-):
+    startDate: str | None = Query(None),
+    endDate: str | None = Query(None),
+    x_coffeemail_api_key: str | None = Header(None, alias="x-coffeemail-api-key"),
+    x_coffeemail_base_url: str | None = Header(None, alias="x-coffeemail-base-url"),
+) -> dict[str, object]:
     start = time.perf_counter()
     try:
         client = get_client(x_coffeemail_api_key, x_coffeemail_base_url)
@@ -535,6 +672,11 @@ def get_stats(
                 "totalBounced": d.total_bounced,
                 "deliveryRate": d.delivery_rate,
             },
+            start_time=start,
+        )
+    except CoffeeMailError as exc:
+        return standard_response(
+            error={"code": exc.code or "COFFEEMAIL_ERROR", "message": exc.message, "status": exc.status_code or 400},
             start_time=start,
         )
     except Exception as exc:

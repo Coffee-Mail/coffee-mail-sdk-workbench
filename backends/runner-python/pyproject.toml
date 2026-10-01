@@ -6,8 +6,23 @@ requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.110.0",
     "uvicorn>=0.28.0",
-    "coffeemail",
+    "coffeemail>=0.1.0",
 ]
 
-[tool.uv.sources]
-coffeemail = { path = "../../../coffee-mail-sdk-python", editable = true }
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "UP",
+]
+ignore = ["E501", "B008"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
