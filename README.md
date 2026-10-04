@@ -1,32 +1,44 @@
-# CoffeeMail SDK Workbench
+<div align="center">
 
-Bancada de testes, validação funcional e auditoria multiplataforma para os SDKs oficiais da **CoffeeMail**, desenvolvida sob os princípios de **Spec-Driven Development (SDD)**, **Clean Code** e **SOLID**.
+# 🧪 CoffeeMail SDK Workbench
+
+**Bancada de testes, validação funcional e auditoria multiplataforma para os SDKs oficiais da CoffeeMail**
+
+[![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?style=flat-square&logo=pnpm&logoColor=white)](https://pnpm.io)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![React](https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react&logoColor=white)](https://react.dev)
+[![Spec-Driven](https://img.shields.io/badge/Spec--Driven-OpenAPI%203.1-6BA539?style=flat-square)](./specs/openapi.json)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg?style=flat-square)](./LICENSE)
+
+[Finalidade](#-finalidade-do-projeto) · [Arquitetura dos Runners](#-arquitetura-multi-runner) · [Como Executar](#-como-executar) · [Módulos Testados](#-recursos-e-módulos-validados) · [Novos Runners](#-adicionando-um-novo-runner)
+
+</div>
 
 ---
 
 ## 🎯 Finalidade do Projeto
 
-O **CoffeeMail SDK Workbench** foi criado para resolver um problema recorrente: a dificuldade de testar exaustivamente todas as funcionalidades de uma biblioteca cliente (SDK) em um ambiente controlado, realista e agnóstico de linguagem.
+O **CoffeeMail SDK Workbench** é uma bancada de auditoria desenvolvida sob a metodologia **Spec-Driven Development (SDD)**. Ele permite validar o comportamento funcional, consistência e ergonomia de desenvolvedor (DX) dos SDKs oficiais da CoffeeMail em qualquer linguagem antes de publicações em gerenciadores de pacotes (npm, PyPI, etc.).
 
-### Principais Objetivos:
-- **Testabilidade Total de Features**: Fornecer uma interface visual simples e funcional para executar 100% dos métodos e fluxos do SDK (envios, domínios, templates, audiências, supressões, webhooks, estatísticas e introspecção).
-- **Arquitetura Multi-Runner Desacoplada**: Permitir que **uma única interface web** em React teste implementações do SDK em qualquer linguagem (Node.js, Python, Go, Java) apenas alternando o runner de destino no cabeçalho.
-- **Auditoria de DX (Developer Experience)**: Validar ergonomia de tipos, envelopes de retorno seguro `{ data, error }`, consistência de respostas e tempos de execução dos SDKs antes de cada publicação oficial no gerenciador de pacotes (npm, PyPI, etc.).
-- **Zero Redundância de Credenciais**: A **API Key** é gerenciada centralmente no Front-end (com persistência em `localStorage`) e repassada sob demanda para os runners via header HTTP `x-coffeemail-api-key`. Os backends dos runners são estéreis e não exigem chaves em arquivos `.env`.
+### Principais Benefícios:
+- **Interface Visual Única**: Um único painel web em React 19 testa múltiplos SDKs apenas alternando o runner ativo.
+- **Validação de Conformidade**: Garante que o retorno seguro `{ data, error }`, o mapeamento de exceções e a tipagem respeitem a especificação OpenAPI 3.1.
+- **Backends Desacoplados e Sem Estado**: Os runners não armazenam credenciais nem arquivos `.env`. A **API Key** é gerenciada exclusivamente no navegador e enviada dinamicamente via cabeçalho HTTP `x-coffeemail-api-key`.
+- **Métricas Reais de Execução**: Apresenta em tempo real a latência de chamada do SDK e o payload JSON bruto de resposta.
 
 ---
 
-## 🏛️ Arquitetura da Solução
+## 🏛️ Arquitetura Multi-Runner
 
-O monorepo utiliza **pnpm workspaces** e organiza-se em três camadas isoladas:
+O monorepo utiliza **pnpm workspaces** e distribui responsabilidades entre quatro camadas:
 
 ```mermaid
 flowchart TD
-    Front["Front-end Web (React 19 + Vite)\n- Interface de controle unificada\n- API Key centralizada via localStorage\n- Seletor dinâmico de Runner"]
+    Front["Front-end Web (React 19 + Vite - Porta 5173)\n- Seletor dinâmico de Runner ativo\n- API Key via localStorage e header HTTP\n- Painel de inspeção de payload e latência"]
     
     subgraph Runners ["Camada de Runners (Mini-Backends HTTP)"]
         RunnerNode["Runner Node.js (Porta 4001)\nConsome @coffeemail/node"]
-        RunnerPython["Runner Python (Porta 4002)\nConsome coffeemail-python (Planejado)"]
+        RunnerPython["Runner Python (Porta 4002)\nConsome coffeemail (PyPI)"]
         RunnerGo["Runner Go (Porta 4003)\nConsome coffeemail-go (Planejado)"]
     end
     
@@ -49,58 +61,66 @@ flowchart TD
 ```text
 coffee-mail-sdk-workbench/
 ├── specs/                          # Especificação SDD da Runner API
-│   ├── SPEC.md                     # Requisitos arquiteturais, fluxos e contratos funcionais
+│   ├── SPEC.md                     # Requisitos arquiteturais, fluxos e contratos
 │   ├── openapi.json                # Especificação OpenAPI 3.1 padronizada
-│   └── DX_EVOLUTION_SPEC.md        # Especificação de melhorias e ergonomia do SDK
+│   └── DX_EVOLUTION_SPEC.md        # Diretrizes de evolução de ergonomia
 ├── packages/
-│   └── contracts/                  # Pacote de DTOs TypeScript estritos compartilhados
+│   └── contracts/                  # DTOs TypeScript estritos compartilhados
 ├── backends/
-│   └── runner-node/                # Runner Express que instancia e executa o @coffeemail/node
+│   ├── runner-node/                # Runner Express (Porta 4001) consumindo @coffeemail/node
+│   └── runner-python/              # Runner FastAPI (Porta 4002) consumindo coffeemail (Python)
 └── apps/
-    └── web/                        # Interface funcional (React 19, CSS Moderno, sem Tailwind)
+    └── web/                        # Interface de controle (React 19 + Vite - Porta 5173)
 ```
 
 ---
 
-## 🧩 Recursos e Módulos Disponíveis
+## 🧩 Recursos e Módulos Validados
 
-| Módulo | Ações Disponíveis | Funcionalidades Validadas no SDK |
+| Aba | Ações Validadas | Funcionalidades Exercitadas nos SDKs |
 | :--- | :--- | :--- |
-| **Introspecção** | Consultar Chave | Valida integridade da chave, ambiente (`live`/`test`) e lista de permissões (`scopes`). |
-| **E-mails** | Envio e Histórico | Disparo transacional com HTML/texto e listagem com status de entrega. |
-| **Domínios** | Cadastro, DNS e Saúde | Criação de domínios, geração de registros DNS, disparo de verificação e diagnóstico de reputação. |
-| **Modelos** | Criação e Preview | Cadastro de templates HTML e renderização de pré-visualização. |
-| **Audiências** | Listas e Contatos | Criação de audiências, adição de contatos e listagem de inscritos. |
-| **Supressões** | Listar, Adicionar, Remover | Controle de bloqueios de envio (bounces, reclamações e descadastros). |
-| **Webhooks** | Listar, Criar e Testar | Configuração de endpoints para escuta de eventos e envio de payloads de teste. |
-| **Estatísticas** | Consulta de Métricas | Agregação de totais (enviados, entregues, bounces) por intervalo de datas. |
+| **Introspecção** | Consultar Chave | Valida integridade da API Key, ambiente (`live` ou `test`) e escopos autorizados |
+| **E-mails** | Envio e Histórico | Disparo transacional com HTML/texto e consulta de status de entrega |
+| **Domínios** | Cadastro, DNS e Saúde | Criação de domínios, exibição de registros DNS, verificação e diagnóstico de reputação |
+| **Modelos** | Criação e Preview | Cadastro de templates e renderização em tempo real via sandbox |
+| **Audiências** | Listas e Contatos | Criação de audiências, inclusão de contatos e listagem de subscritos |
+| **Supressões** | Listar, Adicionar, Remover | Bloqueios e desbloqueios de envio (bounces permanentes e descadastros) |
+| **Webhooks** | Listar, Criar e Testar | Registro de endpoints, envio de evento de teste e rotação de chave de assinatura |
+| **Estatísticas** | Consulta de Métricas | Agregação de totais (enviados, entregues, bounces) por intervalo de datas |
 
 ---
 
 ## 🚀 Como Executar
 
 ### Pré-requisitos
-- **Node.js** >= 18.0.0
-- **pnpm** >= 9.0.0
+- **Node.js** `>= 18`
+- **pnpm** `>= 9`
+- **Python** `>= 3.10` (para execução do Runner Python)
 
-### 1. Instalação das Dependências
+### 1. Instalar Dependências
 Na raiz do monorepo:
+
 ```bash
 pnpm install
 ```
 
-### 2. Inicialização dos Serviços
+### 2. Executar o Ambiente
 
-#### Opção A: Executar Todo o Ambiente (Recomendado)
-Inicia o backend (Runner Node na porta 4001) e o frontend (Vite na porta 5173) simultaneamente:
+#### Iniciar todos os serviços simultaneamente (Recomendado)
+Inicia o **Runner Node (:4001)**, o **Runner Python (:4002)** e a **Interface Web (:5173)** em paralelo:
+
 ```bash
 pnpm run dev
 ```
 
-#### Opção B: Executar os Serviços Separadamente
-- **Apenas o Runner Node**:
+#### Iniciar serviços individualmente
+- **Apenas o Runner Node.js**:
   ```bash
   pnpm run dev:backend
+  ```
+- **Apenas o Runner Python**:
+  ```bash
+  pnpm run dev:runner-python
   ```
 - **Apenas a Interface Web**:
   ```bash
@@ -111,40 +131,44 @@ pnpm run dev
 
 ## 💻 Como Usar a Interface
 
-1. **Acesse a Aplicação**: Abra [http://localhost:5173](http://localhost:5173) no seu navegador.
-2. **Defina a sua API Key**: No cabeçalho superior, cole a sua chave do CoffeeMail (`cm_live_...` ou `cm_test_...`). A chave é salva automaticamente no `localStorage` do seu navegador.
-3. **Verifique o Status do Runner**: O indicador no canto superior direito deve exibir **"Runner Conectado"** (com tempo de resposta e versão do SDK).
-4. **Execute Operações**:
-   - Navegue pelas abas (**Introspecção**, **E-mails**, **Domínios**, etc.).
-   - Preencha os campos do formulário e clique em **"Executar no SDK"**.
-   - Acompanhe o resultado no painel **"Retorno da Operação (SDK Payload)"**, que exibe o payload JSON real devolvido pelo SDK, tempo de execução e status.
+1. **Acesse a Aplicação**: Abra `http://localhost:5173` no navegador.
+2. **Defina a API Key**: Cole sua chave do CoffeeMail (`cm_live_...` ou `cm_test_...`) no cabeçalho. Ela será salva no `localStorage` do seu navegador.
+3. **Selecione o Runner**: Alterne entre o **Node.js Runner (Porta 4001)** e o **Python Runner (Porta 4002)** para validar comportamentos comparativos.
+4. **Execute Ações**: Navegue pelas abas, preencha os formulários e clique em **"Executar no SDK"**.
+5. **Inspecione o Retorno**: O painel exibe o tempo de resposta e o payload bruto devolvido pelo SDK.
 
 ---
 
-## 🛠️ Scripts Disponíveis
+## 🛠️ Scripts do Monorepo
 
-Todos os comandos devem ser executados a partir da raiz do monorepo:
+```bash
+# Iniciar todos os workspaces em desenvolvimento
+pnpm run dev
 
-- **`pnpm run dev`**: Inicia todos os workspaces em modo de desenvolvimento com hot-reload.
-- **`pnpm run build`**: Compila todos os pacotes (`contracts`, `runner-node` e `apps/web`).
-- **`pnpm run typecheck`**: Executa a verificação estrita de tipos TypeScript (`tsc --noEmit`) em todos os projetos.
-- **`pnpm run test`**: Roda a suíte completa de testes unitários com **Vitest**.
+# Compilar todos os pacotes (contracts, runners e web)
+pnpm run build
+
+# Executar checagem estrita de tipos TypeScript
+pnpm run typecheck
+
+# Executar testes unitários
+pnpm run test
+```
 
 ---
 
-## 🔌 Adicionando um Novo Runner (ex: Python, Go ou Java)
+## 🔌 Adicionando um Novo Runner (ex: Go ou Java)
 
-Para adicionar suporte ao SDK de outra linguagem:
+Para adicionar um novo runner ao ecossistema do Workbench:
 
-1. **Criar a Pasta do Runner**:
-   Crie `backends/runner-<linguagem>` (ex: `backends/runner-python`).
-2. **Implementar a Especificação**:
-   Implemente os endpoints HTTP definidos rigorosamente em [`specs/openapi.json`](file:///Users/joaoneto/Developer/SaaS/coffee-mail-sdk-workbench/specs/openapi.json) (prefixados em `/api/v1/*`).
-3. **Extrair a API Key do Header**:
-   Seu backend deve extrair o header `x-coffeemail-api-key` para instanciar o SDK dinamicamente por requisição.
-4. **Configurar a Porta**:
-   Defina a porta no seu runner (ex: `4002` para Python, `4003` para Go).
-5. **Cadastrar no Front-end**:
-   Adicione o novo runner na constante `DEFAULT_RUNNERS` em [apps/web/src/constants/ui-strings.ts](file:///Users/joaoneto/Developer/SaaS/coffee-mail-sdk-workbench/apps/web/src/constants/ui-strings.ts).
+1. Crie o diretório em `backends/runner-<linguagem>` (ex: `backends/runner-go`).
+2. Implemente os endpoints HTTP definidos rigorosamente na especificação [`specs/openapi.json`](./specs/openapi.json) (prefixados em `/api/v1/*`).
+3. Extraia o cabeçalho `x-coffeemail-api-key` em cada requisição para instanciar o cliente do SDK dinamicamente.
+4. Configure a porta de execução (ex: `4003` para Go).
+5. Cadastre o novo runner na constante `DEFAULT_RUNNERS` em `apps/web/src/constants/ui-strings.ts`.
 
-O Workbench passará a testar o novo SDK instantaneamente, sem necessidade de alterações estruturais na interface.
+---
+
+## 📄 Licença
+
+Software proprietário. Todos os direitos reservados à equipe **CoffeeMail**.
