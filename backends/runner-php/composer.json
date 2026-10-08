@@ -1,0 +1,20 @@
+{
+  "name": "coffeemail/runner-php",
+  "description": "Mini-backend runner PHP para validação de conformidade do SDK no Workbench.",
+  "type": "project",
+  "require": {
+    "php": "^8.2",
+    "coffeemail/coffeemail-php": "@dev"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../../../coffee-mail-sdk-php",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

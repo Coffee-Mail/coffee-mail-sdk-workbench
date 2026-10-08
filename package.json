@@ -6,8 +6,9 @@
   "scripts": {
     "dev:backend": "pnpm --filter @coffeemail/runner-node dev",
     "dev:runner-python": "pnpm --filter @coffeemail/runner-python dev",
+    "dev:runner-php": "pnpm --filter @coffeemail/workbench-runner-php dev",
     "dev:web": "pnpm --filter @coffeemail/workbench-web dev",
-    "dev": "pnpm --parallel --filter @coffeemail/runner-node --filter @coffeemail/runner-python --filter @coffeemail/workbench-web dev",
+    "dev": "pnpm --parallel --filter @coffeemail/runner-node --filter @coffeemail/runner-python --filter @coffeemail/workbench-runner-php --filter @coffeemail/workbench-web dev",
     "build": "pnpm --recursive run build",
     "test": "pnpm --recursive run test",
     "typecheck": "pnpm --recursive run typecheck"
