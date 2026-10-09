@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@coffeemail/node": "^0.1.4",
+    "@coffeemail/node": "^0.2.1",
     "@coffeemail/workbench-contracts": "workspace:*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

@@ -43,8 +43,8 @@ importers:
   backends/runner-node:
     dependencies:
       '@coffeemail/node':
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.2.1
+        version: 0.2.1
       '@coffeemail/workbench-contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -76,6 +76,10 @@ importers:
       vitest:
         specifier: ^3.0.7
         version: 3.2.7(@types/node@22.20.4)(tsx@4.23.15)
+
+  backends/runner-php: {}
+
+  backends/runner-python: {}
 
   packages/contracts:
     devDependencies:
@@ -168,8 +172,8 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
-  '@coffeemail/node@0.1.4':
-    resolution: {integrity: sha512-sz7x21bmMxvvjiSr13wJGwHvcTTM8bkHuCvQH6mgfeK8J12G+xo1lrDkaJISvPVZgYsTDeuB7jFdENn0jmzs9Q==}
+  '@coffeemail/node@0.2.1':
+    resolution: {integrity: sha512-5tkN7l3RqJXmXa1xOlNq9CBpFFiI4doZ7zBSv3UgGP43DPKA8KzZ1jdqqGJeM+iwsMSDwNTrxdwyO7NgIWaI4g==}
     engines: {node: '>=18'}
 
   '@esbuild/aix-ppc64@0.25.12':
@@ -1449,7 +1453,7 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
-  '@coffeemail/node@0.1.4': {}
+  '@coffeemail/node@0.2.1': {}
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true
