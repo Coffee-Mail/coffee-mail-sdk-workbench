@@ -1,3 +1,4 @@
+import { COFFEEMAIL_VERSION } from "@coffeemail/node";
 import { describe, expect, it } from "vitest";
 import type {
   ICoffeeMailSdkAdapter,
@@ -14,7 +15,7 @@ class MockCoffeeMailAdapter implements Partial<ICoffeeMailSdkAdapter> {
     return {
       language: "node",
       runtime: "v22.0.0",
-      sdkVersion: "0.1.6",
+      sdkVersion: COFFEEMAIL_VERSION,
       status: "online",
     };
   }
@@ -44,7 +45,7 @@ describe("CoffeeMailRunnerService", () => {
 
     expect(info.language).toBe("node");
     expect(info.status).toBe("online");
-    expect(info.sdkVersion).toBe("0.1.6");
+    expect(info.sdkVersion).toBe(COFFEEMAIL_VERSION);
   });
 
   it("deve encapsular resposta bem-sucedida com tempo de execução e status success=true", async () => {
