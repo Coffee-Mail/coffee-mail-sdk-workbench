@@ -4,3 +4,5 @@ packages:
   - "apps/*"
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - '@coffeemail/node@0.2.1'

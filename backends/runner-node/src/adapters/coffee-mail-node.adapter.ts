@@ -1,3 +1,4 @@
+import { COFFEEMAIL_VERSION } from "@coffeemail/node";
 import { CoffeeMail } from "@coffeemail/node";
 import type {
   AudienceRecordDTO,
@@ -41,7 +42,7 @@ export class CoffeeMailNodeAdapter implements ICoffeeMailSdkAdapter {
     return {
       language: "node",
       runtime: process.version,
-      sdkVersion: "0.2.0",
+      sdkVersion: COFFEEMAIL_VERSION,
       status: "online",
     };
   }

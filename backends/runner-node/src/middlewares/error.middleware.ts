@@ -1,3 +1,4 @@
+import { COFFEEMAIL_VERSION } from "@coffeemail/node";
 import type { NextFunction, Request, Response } from "express";
 import type { StandardApiResponse } from "@coffeemail/workbench-contracts";
 
@@ -15,7 +16,7 @@ export function globalErrorMiddleware(
     runner: {
       language: "node",
       runtime: process.version,
-      sdkVersion: "0.1.6",
+      sdkVersion: COFFEEMAIL_VERSION,
       status: "degraded",
     },
     executionTimeMs: 0,
