@@ -96,7 +96,7 @@ export const DEFAULT_RUNNERS = [
   { id: "node", label: "Node.js Runner (Porta 4001)", url: "http://localhost:4001" },
   { id: "python", label: "Python Runner (Porta 4002)", url: "http://localhost:4002" },
   { id: "php", label: "PHP Runner (Porta 4003)", url: "http://localhost:4003" },
-  { id: "go", label: "Go Runner (Porta 4004 - Planejado)", url: "http://localhost:4004" },
+  { id: "go", label: "Go Runner (Porta 4004)", url: "http://localhost:4004" },
   { id: "java", label: "Java Runner (Porta 4005)", url: "http://localhost:4005" },
 ] as const;
 

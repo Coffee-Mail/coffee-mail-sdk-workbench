@@ -2,7 +2,7 @@
 
 # ☕ CoffeeMail SDK Workbench
 
-**Bancada interna, guiada por spec, para exercitar e comparar os SDKs oficiais da CoffeeMail (Node.js, Python, PHP e Java) a partir de uma única UI.**
+**Bancada interna, guiada por spec, para exercitar e comparar os SDKs oficiais da CoffeeMail (Node.js, Python, PHP, Java e Go) a partir de uma única UI.**
 
 [![CI](https://github.com/Coffee-Mail/coffee-mail-sdk-workbench/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Coffee-Mail/coffee-mail-sdk-workbench/actions/workflows/ci.yml)
 [![pnpm workspaces](https://img.shields.io/badge/pnpm-workspaces-F69220?style=flat-square&logo=pnpm&logoColor=white)](./pnpm-workspace.yaml)
@@ -49,7 +49,7 @@ O Workbench é um monorepo pnpm que valida o comportamento dos SDKs da CoffeeMai
 | `runner-python` | `4002` | FastAPI + uvicorn (uv) | `coffeemail` `>=0.1.0` | PyPI (`uv.lock` em `0.1.0`) |
 | `runner-php` | `4003` | Servidor embutido `php -S` | `coffeemail/coffeemail-php` `@dev` | **Caminho local** `../../../coffee-mail-sdk-php` (repositório `path`, symlink) |
 | `runner-java` | `4005` | Javalin 7 (Gradle 9.8.1) | `br.com.coffeemail:coffeemail-java` `0.1.0` | Composite build de `../../../coffee-mail-sdk-java` se o diretório existir; senão Maven Central |
-| Go | `4004` | — | — | Planejado; não existe runner no repo |
+| `runner-go` | `4004` | `net/http` (Go 1.24+) | `github.com/Coffee-Mail/coffee-mail-sdk-go` `0.1.0` | **Caminho local** `../../../coffee-mail-sdk-go` (diretiva `replace` no `go.mod`) até a primeira versão ser publicada |
 
 ### Abas da UI
 
@@ -71,11 +71,11 @@ Ferramenta interna (`"private": true`), sem release nem publicação. Limitaçõ
 - **Node e Python testam o SDK publicado**, não o código local: `runner-node` resolve `@coffeemail/node` pelo npm e `runner-python` resolve `coffeemail` pelo PyPI. Para validar uma mudança ainda não publicada nesses SDKs é preciso apontar a dependência manualmente para o caminho local.
 - **PHP depende do repositório irmão**: sem `coffee-mail-sdk-php` em `../coffee-mail-sdk-php` (relativo à raiz do workbench), `composer install` em `runner-php` falha.
 - **Só a API de produção.** Os runners sempre falam com `https://api.coffeemail.com.br`: nenhum SDK permite trocar o host da API, para que a chave nunca seja enviada a outro servidor. Não há como apontar a bancada para uma API local.
-- **Go aparece na UI e na spec, mas não está implementado**: selecioná-lo resulta em runner desconectado.
+- **Go depende do repositório irmão**: enquanto o SDK Go não tiver versão publicada, o `go.mod` de `runner-go` usa `replace` para `../../../coffee-mail-sdk-go`; sem esse diretório, o build falha.
 - **Cobertura parcial da spec**: a matriz da SPEC §3 lista operações (batch, broadcasts, rotação de secret, logs de entrega etc.) que nenhum runner expõe. Os runners implementam as 22 rotas listadas em [Endpoints](#-endpoints).
 - **`specs/openapi.json` descreve só 10 dos paths** implementados pelos runners (faltam as rotas com `{id}`/`{email}`).
 - **Status HTTP divergentes entre runners**: Node e Java devolvem 201 nas criações, 400 com `VALIDATION_ERROR` quando faltam campos e 400 em falha do SDK. Python e PHP não fazem essa validação prévia e devolvem HTTP 200 mesmo quando o SDK falha (o erro vem só no envelope, com `success: false`); ausência de API key gera 400 em ambos.
-- **CI só cobre a parte TypeScript** (`contracts`, `runner-node`, `web`); os testes de Python e Java rodam apenas localmente e o runner PHP não tem testes.
+- **CI só cobre a parte TypeScript** (`contracts`, `runner-node`, `web`); os testes de Python, Java e Go rodam apenas localmente e o runner PHP não tem testes.
 
 ## 🏗️ Arquitetura
 
@@ -88,6 +88,7 @@ flowchart LR
         Node["runner-node :4001<br/>@coffeemail/node (npm)"]
         Py["runner-python :4002<br/>coffeemail (PyPI)"]
         Php["runner-php :4003<br/>coffee-mail-sdk-php (path local)"]
+        Go["runner-go :4004<br/>coffee-mail-sdk-go (path local)"]
         Java["runner-java :4005<br/>coffeemail-java (local ou Maven Central)"]
     end
 
@@ -140,7 +141,8 @@ coffee-mail-sdk-workbench/
 │   ├── runner-node/                # Express: controllers, services, adapters, __tests__
 │   ├── runner-python/              # FastAPI: server.py, tests/, pyproject.toml, uv.lock
 │   ├── runner-php/                 # server.php, composer.json (repo path para o SDK local)
-│   └── runner-java/                # Javalin + Gradle wrapper; src/main e src/test
+│   ├── runner-java/                # Javalin + Gradle wrapper; src/main e src/test
+│   └── runner-go/                  # net/http: handlers, adapter, records, runner_test.go
 ├── apps/
 │   └── web/                        # React 19 + Vite: modules/ (uma aba por recurso), hooks/, constants/
 ├── package.json                    # Scripts do monorepo
@@ -148,7 +150,7 @@ coffee-mail-sdk-workbench/
 └── tsconfig.base.json
 ```
 
-Os runners Python, PHP e Java têm um `package.json` mínimo só para participar do workspace e serem acionados por `pnpm --filter`.
+Os runners Python, PHP, Java e Go têm um `package.json` mínimo só para participar do workspace e serem acionados por `pnpm --filter`.
 
 ## 📋 Requisitos
 
@@ -159,7 +161,8 @@ Os runners Python, PHP e Java têm um `package.json` mínimo só para participar
 | Python + [uv](https://docs.astral.sh/uv/) | Python `>=3.10` | `runner-python` |
 | PHP + Composer | PHP `^8.2` com `ext-curl` e `ext-json` | `runner-php` |
 | JDK | 17+ para executar o Gradle; o toolchain Java 21 é baixado automaticamente (plugin foojay) | `runner-java` |
-| Repositórios irmãos | `coffee-mail-sdk-php` (obrigatório para PHP); `coffee-mail-sdk-java` (opcional) | `runner-php`, `runner-java` |
+| Go | 1.24+ | `runner-go` |
+| Repositórios irmãos | `coffee-mail-sdk-php` e `coffee-mail-sdk-go` (obrigatórios para PHP e Go); `coffee-mail-sdk-java` (opcional) | `runner-php`, `runner-go`, `runner-java` |
 
 Layout de diretórios esperado pelos caminhos relativos:
 
@@ -167,7 +170,8 @@ Layout de diretórios esperado pelos caminhos relativos:
 <workspace>/
 ├── coffee-mail-sdk-workbench/
 ├── coffee-mail-sdk-php/       # exigido por backends/runner-php/composer.json
-└── coffee-mail-sdk-java/      # usado por backends/runner-java/settings.gradle.kts se existir
+├── coffee-mail-sdk-java/      # usado por backends/runner-java/settings.gradle.kts se existir
+└── coffee-mail-sdk-go/        # exigido pelo replace de backends/runner-go/go.mod
 ```
 
 ## 🚀 Início rápido
@@ -185,7 +189,7 @@ pnpm build
 
 O runner Python não exige passo extra: `uv run` cria o `.venv` e sincroniza o `uv.lock` na primeira execução. O runner Java baixa Gradle, JDK 21 e dependências na primeira execução.
 
-Subir tudo (Node, Python, PHP, Java e UI em paralelo):
+Subir tudo (Node, Python, PHP, Java, Go e UI em paralelo):
 
 ```bash
 pnpm dev
@@ -199,6 +203,7 @@ pnpm dev:backend
 pnpm dev:runner-python
 pnpm dev:runner-php
 pnpm dev:runner-java
+pnpm dev:runner-go
 ```
 
 Uso da UI:
@@ -232,6 +237,7 @@ O workbench não usa arquivo de credenciais. A configuração é por header de r
 | --- | --- | --- | --- | --- |
 | `PORT` | `runner-node` | Não | `4001` | Porta HTTP; lida via `dotenv` de `backends/runner-node/.env` (modelo em `.env.example`) |
 | `PORT` | `runner-java` | Não | `4005` | Porta HTTP; valores não numéricos são ignorados |
+| `PORT` | `runner-go` | Não | `4004` | Porta HTTP |
 
 As portas de Python (`4002`) e PHP (`4003`) estão fixas nos scripts do `package.json` de cada runner. A UI (`5173`, `host: true`) está em `apps/web/vite.config.ts`. A lista de runners da UI está em `DEFAULT_RUNNERS` (`apps/web/src/constants/ui-strings.ts`); mudar a porta de um runner exige atualizar essa lista.
 
@@ -264,7 +270,7 @@ Rotas implementadas pelos quatro runners (prefixo `/api/v1`, CORS liberado para 
 | `POST` | `/webhooks/{id}/test` | 200 | — |
 | `GET` | `/stats` | 200 | `startDate`, `endDate`, `period` (query) |
 
-A tabela segue `backends/runner-node/src/routes/index.ts` e `backends/runner-java/.../RunnerRoutes.java`. Em Node e Java, falhas do SDK voltam como HTTP 400 com o erro mapeado no envelope; exceções não tratadas voltam como 500 em todos os runners.
+A tabela segue `backends/runner-node/src/routes/index.ts`, `backends/runner-java/.../RunnerRoutes.java` e `backends/runner-go/handlers.go`. Em Node, Java e Go, falhas do SDK voltam como HTTP 400 com o erro mapeado no envelope; exceções não tratadas voltam como 500 em todos os runners.
 
 Tipos em TypeScript: `RUNNER_ENDPOINTS` e `RUNNER_HEADERS` em `packages/contracts/src/endpoints.ts`, DTOs em `packages/contracts/src/dtos.ts`.
 
@@ -282,7 +288,7 @@ Passo a passo seguido na entrada do runner Java (commits `8a5d893` e `75a5986`):
 8. **Escreva testes** do runner e documente-os em [Testes e qualidade](#-testes-e-qualidade) e neste README.
 9. Valide com `pnpm build && pnpm typecheck && pnpm test` e exercite as abas pela UI contra o novo runner.
 
-A porta `4004` está reservada para Go na UI e no `openapi.json`.
+As portas `4001` a `4005` estão ocupadas (Node, Python, PHP, Go e Java).
 
 ## 🔒 Segurança
 
@@ -296,16 +302,18 @@ A porta `4004` está reservada para Go na UI e no `openapi.json`.
 
 | Script | Comando | O que faz |
 | --- | --- | --- |
-| `dev` | `pnpm --parallel --filter … dev` | Sobe `runner-node`, `runner-python`, `runner-php`, `runner-java` e `web` |
+| `dev` | `pnpm --parallel --filter … dev` | Sobe `runner-node`, `runner-python`, `runner-php`, `runner-java`, `runner-go` e `web` |
 | `dev:backend` | `pnpm --filter @coffeemail/runner-node dev` | Só o runner Node (`tsx watch`) |
 | `dev:runner-python` | `pnpm --filter @coffeemail/runner-python dev` | Só o runner Python (uvicorn com `--reload`) |
 | `dev:runner-php` | `pnpm --filter @coffeemail/workbench-runner-php dev` | Só o runner PHP |
 | `dev:runner-java` | `pnpm --filter @coffeemail/workbench-runner-java dev` | Só o runner Java (`./gradlew run`) |
+| `dev:runner-go` | `pnpm --filter @coffeemail/workbench-runner-go dev` | Só o runner Go (`go run .`) |
 | `dev:web` | `pnpm --filter @coffeemail/workbench-web dev` | Só a UI (Vite) |
 | `build` | `pnpm --recursive run build` | `tsc` em `contracts` e `runner-node`; `tsc && vite build` na `web` |
 | `typecheck` | `pnpm --recursive run typecheck` | `tsc --noEmit` em `contracts`, `runner-node` e `web` |
 | `test` | `pnpm --recursive run test` | Vitest do `runner-node` (único pacote com script `test`) |
 | `test:jvm` | `pnpm --filter @coffeemail/workbench-runner-java test:jvm` | `./gradlew test` do runner Java |
+| `test:go` | `pnpm --filter @coffeemail/workbench-runner-go test:go` | `go test -race ./...` do runner Go |
 
 ### Por pacote
 
@@ -316,6 +324,7 @@ A porta `4004` está reservada para Go na UI e no `openapi.json`.
 | `@coffeemail/runner-python` | `dev`, `start` |
 | `@coffeemail/workbench-runner-php` | `dev`, `start` (ambos `php -S 0.0.0.0:4003 server.php`) |
 | `@coffeemail/workbench-runner-java` | `dev`, `start`, `test:jvm` |
+| `@coffeemail/workbench-runner-go` | `dev`, `start`, `test:go` |
 | `@coffeemail/workbench-web` | `dev`, `build`, `preview`, `typecheck` |
 
 ## 🧪 Testes e qualidade
@@ -325,6 +334,7 @@ A porta `4004` está reservada para Go na UI e no `openapi.json`.
 | `runner-node` (Vitest, service com adapter falso) | `pnpm test` | Local e CI |
 | `runner-python` (pytest + `TestClient`) | `cd backends/runner-python && uv run --with pytest pytest` | Só local (pytest não está nas dependências do runner) |
 | `runner-java` (JUnit 6 + AssertJ, Javalin em porta efêmera) | `pnpm test:jvm` | Só local |
+| `runner-go` (`testing` + `httptest`, SDK com transporte falso) | `pnpm test:go` | Só local |
 | `runner-php` | — | Sem testes |
 
 O runner Java compila com `--release 17`, `-Xlint:all` e `-Werror`.
@@ -342,7 +352,7 @@ pnpm build && pnpm typecheck && pnpm test
 | Sintoma | Causa provável | Ação |
 | --- | --- | --- |
 | UI mostra "Runner Desconectado" | Runner não está de pé ou porta diferente da de `DEFAULT_RUNNERS` | Suba o runner (`pnpm dev:<runner>`) e use **Testar Conexão** |
-| Runner Go sempre desconectado | Não existe implementação | Esperado; escolha outro runner |
+| `go run` falha em `runner-go` com módulo `coffee-mail-sdk-go` não encontrado | `coffee-mail-sdk-go` não está ao lado do workbench | Clone o SDK Go no diretório pai |
 | `composer install` falha em `runner-php` | `coffee-mail-sdk-php` não está ao lado do workbench | Clone o SDK PHP no diretório pai |
 | `typecheck` da `web` ou do `runner-node` falha com módulo `@coffeemail/workbench-contracts` não encontrado | `packages/contracts/dist` ainda não foi gerado | Rode `pnpm build` antes de `pnpm typecheck` (é a ordem do CI) |
 | Mudança local no SDK Node/Python não aparece | Runners resolvem a versão publicada | Aponte a dependência para o caminho local ou publique a versão |
@@ -364,6 +374,7 @@ pnpm build && pnpm typecheck && pnpm test
 | [coffee-mail-sdk-python](https://github.com/Coffee-Mail/coffee-mail-sdk-python) | SDK oficial Python (`coffeemail`) |
 | [coffee-mail-sdk-php](https://github.com/Coffee-Mail/coffee-mail-sdk-php) | SDK oficial PHP (`coffeemail/coffeemail-php`) |
 | [coffee-mail-sdk-java](https://github.com/Coffee-Mail/coffee-mail-sdk-java) | SDK oficial Java (`br.com.coffeemail:coffeemail-java`) |
+| [coffee-mail-sdk-go](https://github.com/Coffee-Mail/coffee-mail-sdk-go) | SDK oficial Go (`github.com/Coffee-Mail/coffee-mail-sdk-go`) |
 | [coffee-mail-laravel](https://github.com/Coffee-Mail/coffee-mail-laravel) | Integração Laravel (`coffeemail/coffeemail-laravel`) |
 | **coffee-mail-sdk-workbench** (você está aqui) | Bancada de validação dos SDKs por spec |
 

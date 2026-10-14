@@ -1,0 +1,11 @@
+{
+  "name": "@coffeemail/workbench-runner-go",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Runner do Workbench sobre o SDK Go da CoffeeMail (porta 4004).",
+  "scripts": {
+    "dev": "go run .",
+    "start": "go run .",
+    "test:go": "go test -race ./..."
+  }
+}
