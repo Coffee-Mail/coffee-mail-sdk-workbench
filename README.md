@@ -70,7 +70,7 @@ Ferramenta interna (`"private": true`), sem release nem publicação. Limitaçõ
 
 - **Node e Python testam o SDK publicado**, não o código local: `runner-node` resolve `@coffeemail/node` pelo npm e `runner-python` resolve `coffeemail` pelo PyPI. Para validar uma mudança ainda não publicada nesses SDKs é preciso apontar a dependência manualmente para o caminho local.
 - **PHP depende do repositório irmão**: sem `coffee-mail-sdk-php` em `../coffee-mail-sdk-php` (relativo à raiz do workbench), `composer install` em `runner-php` falha.
-- **`x-coffeemail-base-url` é suportado só por Python e Java.** O header está previsto na SPEC §5.1, mas a UI não o envia, o runner Node não o lê e o runner PHP apenas o libera no CORS. Para apontar para uma API local, chame o runner Python ou Java diretamente (ex.: `curl`).
+- **Só a API de produção.** Os runners sempre falam com `https://api.coffeemail.com.br`: nenhum SDK permite trocar o host da API, para que a chave nunca seja enviada a outro servidor. Não há como apontar a bancada para uma API local.
 - **Go aparece na UI e na spec, mas não está implementado**: selecioná-lo resulta em runner desconectado.
 - **Cobertura parcial da spec**: a matriz da SPEC §3 lista operações (batch, broadcasts, rotação de secret, logs de entrega etc.) que nenhum runner expõe. Os runners implementam as 22 rotas listadas em [Endpoints](#-endpoints).
 - **`specs/openapi.json` descreve só 10 dos paths** implementados pelos runners (faltam as rotas com `{id}`/`{email}`).
@@ -212,8 +212,7 @@ Chamada direta a um runner, sem UI:
 
 ```bash
 curl -s -X POST http://localhost:4005/api/v1/client/introspect \
-  -H "x-coffeemail-api-key: $COFFEEMAIL_API_KEY" \
-  -H "x-coffeemail-base-url: http://localhost:3030"
+  -H "x-coffeemail-api-key: $COFFEEMAIL_API_KEY"
 ```
 
 ## ⚙️ Configuração
@@ -226,7 +225,6 @@ O workbench não usa arquivo de credenciais. A configuração é por header de r
 | --- | --- | --- | --- |
 | `x-coffeemail-api-key` | Sim, nas operações autenticadas | Todos os runners | Chave CoffeeMail usada para instanciar o SDK naquela requisição |
 | `Authorization: Bearer <key>` | Não | Só `runner-php` (fallback) | Alternativa ao header acima |
-| `x-coffeemail-base-url` | Não | `runner-python`, `runner-java` | URL alternativa da API (ex.: `http://localhost:3030`); sem ela vale o padrão do SDK |
 
 ### Variáveis de ambiente
 
@@ -274,8 +272,8 @@ Tipos em TypeScript: `RUNNER_ENDPOINTS` e `RUNNER_HEADERS` em `packages/contract
 
 Passo a passo seguido na entrada do runner Java (commits `8a5d893` e `75a5986`):
 
-1. **Crie `backends/runner-<lang>/`** com o servidor HTTP implementando as rotas da tabela acima sob `/api/v1`, com CORS liberado e aceitando os headers `x-coffeemail-api-key` e `x-coffeemail-base-url`.
-2. **Instancie o SDK por requisição** a partir de `x-coffeemail-api-key` (e `x-coffeemail-base-url`, quando presente). Não leia chave de `.env` nem guarde credenciais.
+1. **Crie `backends/runner-<lang>/`** com o servidor HTTP implementando as rotas da tabela acima sob `/api/v1`, com CORS liberado e aceitando o header `x-coffeemail-api-key`.
+2. **Instancie o SDK por requisição** a partir de `x-coffeemail-api-key`, sem configurar host da API. Não leia chave de `.env` nem guarde credenciais.
 3. **Responda no envelope da SPEC §5.2** (`success`, `runner`, `executionTimeMs`, `data`, `error`), com `runner.language` igual ao id do runner e `sdkVersion` vinda do SDK. Replique as validações e os status HTTP do runner Node (400 `VALIDATION_ERROR`, 201 nas criações).
 4. **Adicione `backends/runner-<lang>/package.json`** com `name` (ex.: `@coffeemail/workbench-runner-<lang>`), `"private": true` e scripts `dev`/`start` que sobem o servidor na porta escolhida. Inclua `test` ou `build` só se devem rodar no `pnpm -r` do CI.
 5. **Registre no monorepo** (`package.json` raiz): script `dev:runner-<lang>` com `pnpm --filter <name> dev` e um `--filter <name>` a mais no script `dev`.
@@ -349,22 +347,19 @@ pnpm build && pnpm typecheck && pnpm test
 | `typecheck` da `web` ou do `runner-node` falha com módulo `@coffeemail/workbench-contracts` não encontrado | `packages/contracts/dist` ainda não foi gerado | Rode `pnpm build` antes de `pnpm typecheck` (é a ordem do CI) |
 | Mudança local no SDK Node/Python não aparece | Runners resolvem a versão publicada | Aponte a dependência para o caminho local ou publique a versão |
 | Mudança local no SDK Java não aparece | `coffee-mail-sdk-java` ausente no diretório pai, então o Gradle usa o Maven Central | Clone o SDK ao lado do workbench |
-| `x-coffeemail-base-url` ignorado | Runner Node e PHP não leem o header | Use o runner Python ou Java |
 | Erro "Chave de API não informada" | Header `x-coffeemail-api-key` ausente ou vazio | Preencha a API key na UI |
 
 ## 🤝 Contribuição
 
 - Spec primeiro: mudanças no contrato entram em `specs/SPEC.md`/`specs/openapi.json` e em `packages/contracts` antes dos runners e da UI.
 - Paridade: uma rota nova precisa existir em todos os runners com a mesma validação, status HTTP e envelope.
-- Convenções da casa (código em inglês, prosa e commits em pt-BR, sem comentários, sem `any`, early return em vez de `else`, sem magic strings) estão em [`AGENTS.md` da coffee-mail-api](https://github.com/Coffee-Mail/coffee-mail-api/blob/main/AGENTS.md).
+- Convenções da casa: código em inglês, prosa e commits em pt-BR, sem comentários, sem `any`, early return em vez de `else`, sem magic strings.
 - Commits no padrão Conventional Commits em pt-BR (ex.: `feat(runner-java): …`), um PR por mudança contra `main`.
 
 ## 🔗 Projetos relacionados
 
 | Repositório | Papel |
 | --- | --- |
-| [coffee-mail-api](https://github.com/Coffee-Mail/coffee-mail-api) | Backend: API HTTP, filas, worker de envio, billing |
-| [coffee-mail-web](https://github.com/Coffee-Mail/coffee-mail-web) | Landing, documentação pública e dashboard |
 | [coffee-mail-sdk-node](https://github.com/Coffee-Mail/coffee-mail-sdk-node) | SDK oficial Node.js/TypeScript (`@coffeemail/node`) |
 | [coffee-mail-sdk-python](https://github.com/Coffee-Mail/coffee-mail-sdk-python) | SDK oficial Python (`coffeemail`) |
 | [coffee-mail-sdk-php](https://github.com/Coffee-Mail/coffee-mail-sdk-php) | SDK oficial PHP (`coffeemail/coffeemail-php`) |

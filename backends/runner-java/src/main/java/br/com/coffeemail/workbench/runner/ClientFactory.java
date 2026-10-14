@@ -25,8 +25,6 @@ public final class ClientFactory {
         }
         final CoffeeMailBuilder<CoffeeMail> builder =
                 CoffeeMail.builder().apiKey(context.apiKey()).locale(CoffeeMailLocale.PT_BR);
-        final CoffeeMailBuilder<CoffeeMail> withBaseUrl =
-                context.baseUrl().filter(url -> !url.isBlank()).map(builder::baseUrl).orElse(builder);
-        return Optional.of(customizer.apply(withBaseUrl).build());
+        return Optional.of(customizer.apply(builder).build());
     }
 }

@@ -19,7 +19,7 @@ A arquitetura baseia-se em **Spec-Driven Development (SDD)**:
   - **Open/Closed & Liskov**: Criação de novos runners (Python, Go, etc.) estende o ecossistema sem alterar o front-end.
   - **Interface Segregation**: Contratos tipados e específicos por domínio de recurso.
   - **Dependency Inversion**: Serviços dependem de abstrações (`ICoffeeMailSdkAdapter`), não de implementações concretas acopladas.
-- **Isolamento de Credenciais**: A chave de API do CoffeeMail (`x-coffeemail-api-key`) e a URL base opcional (`x-coffeemail-base-url`) são transmitidas por requisição, possibilitando testar chaves com diferentes permissões e ambientes sem reiniciar serviços.
+- **Isolamento de Credenciais**: A chave de API do CoffeeMail (`x-coffeemail-api-key`) é transmitida por requisição, possibilitando testar chaves com diferentes permissões sem reiniciar serviços. Os runners sempre falam com `https://api.coffeemail.com.br`: nenhum SDK permite trocar o host da API, para que a chave nunca seja enviada a outro servidor.
 
 ---
 
@@ -93,7 +93,6 @@ coffee-mail-sdk-workbench/
 
 ### 5.1. Headers Obrigatórios / Opcionais por Requisição
 - `x-coffeemail-api-key` (obrigatório para operações autenticadas): Chave do CoffeeMail a ser utilizada pela chamada do SDK.
-- `x-coffeemail-base-url` (opcional): Endpoint alternativo da API do CoffeeMail (ex: `http://localhost:3000`).
 
 ### 5.2. Formato Padronizado de Resposta
 ```json

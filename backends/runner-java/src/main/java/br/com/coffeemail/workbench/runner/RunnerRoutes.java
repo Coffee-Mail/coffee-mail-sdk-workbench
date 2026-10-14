@@ -20,7 +20,6 @@ import org.jspecify.annotations.Nullable;
 public final class RunnerRoutes {
 
     static final String API_KEY_HEADER = "x-coffeemail-api-key";
-    static final String BASE_URL_HEADER = "x-coffeemail-base-url";
     private static final String PREFIX = "/api/v1";
     private static final String ID = "id";
     private static final String EMAIL = "email";
@@ -135,8 +134,7 @@ public final class RunnerRoutes {
 
     private static RequestContext context(final Context ctx) {
         return new RequestContext(
-                Optional.ofNullable(ctx.header(API_KEY_HEADER)).map(String::strip).orElse(""),
-                Optional.ofNullable(ctx.header(BASE_URL_HEADER)).map(String::strip));
+                Optional.ofNullable(ctx.header(API_KEY_HEADER)).map(String::strip).orElse(""));
     }
 
     private static boolean present(final @Nullable String value) {

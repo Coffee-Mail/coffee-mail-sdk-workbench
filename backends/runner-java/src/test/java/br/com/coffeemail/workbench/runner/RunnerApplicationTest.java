@@ -163,17 +163,17 @@ final class RunnerApplicationTest {
     }
 
     @Test
-    void createDomainReturns201AndHonorsBaseUrlHeader() throws Exception {
+    void createDomainReturns201AndAlwaysTargetsTheOfficialApi() throws Exception {
         final Reply reply = call(
                 "POST",
                 "/api/v1/domains",
                 "{\"name\":\"loja.com.br\"}",
-                Map.of(RunnerRoutes.API_KEY_HEADER, KEY, RunnerRoutes.BASE_URL_HEADER, "http://localhost:3030"));
+                Map.of(RunnerRoutes.API_KEY_HEADER, KEY, "x-coffeemail-base-url", "http://localhost:3030"));
 
         assertThat(reply.status()).isEqualTo(201);
         assertThat(reply.body().path("data").path("createdAt").asText()).isNotBlank();
         assertThat(reply.body().path("data").has("dkimSelector")).isFalse();
-        assertThat(sdkRequests.get(0).uri()).hasToString("http://localhost:3030/v1/product/domains");
+        assertThat(sdkRequests.get(0).uri()).hasToString("https://api.coffeemail.com.br/v1/product/domains");
     }
 
     @Test
