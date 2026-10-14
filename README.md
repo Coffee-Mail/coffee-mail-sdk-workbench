@@ -39,21 +39,27 @@ flowchart TD
     subgraph Runners ["Camada de Runners (Mini-Backends HTTP)"]
         RunnerNode["Runner Node.js (Porta 4001)\nConsome @coffeemail/node"]
         RunnerPython["Runner Python (Porta 4002)\nConsome coffeemail (PyPI)"]
-        RunnerGo["Runner Go (Porta 4003)\nConsome coffeemail-go (Planejado)"]
+        RunnerPhp["Runner PHP (Porta 4003)\nConsome coffeemail/coffeemail-php"]
+        RunnerGo["Runner Go (Porta 4004)\nConsome coffeemail-go (Planejado)"]
+        RunnerJava["Runner Java (Porta 4005)\nConsome br.com.coffeemail:coffeemail-java"]
     end
     
     Contracts["@coffeemail/workbench-contracts\nContratos TypeScript Estritos (DTOs & Endpoints)"]
     
     Front -->|"x-coffeemail-api-key + JSON"| RunnerNode
     Front -->|"x-coffeemail-api-key + JSON"| RunnerPython
+    Front -->|"x-coffeemail-api-key + JSON"| RunnerPhp
     Front -->|"x-coffeemail-api-key + JSON"| RunnerGo
+    Front -->|"x-coffeemail-api-key + JSON"| RunnerJava
     
     RunnerNode -.-> Contracts
     Front -.-> Contracts
     
     RunnerNode --> CoffeeMailAPI["API CoffeeMail (https://api.coffeemail.com.br)"]
     RunnerPython --> CoffeeMailAPI
+    RunnerPhp --> CoffeeMailAPI
     RunnerGo --> CoffeeMailAPI
+    RunnerJava --> CoffeeMailAPI
 ```
 
 ### Estrutura de Diretórios
@@ -157,14 +163,25 @@ pnpm run test
 
 ---
 
-## 🔌 Adicionando um Novo Runner (ex: Go ou Java)
+## ☕ Runner Java
+
+O runner Java (`backends/runner-java`, porta 4005) usa Javalin e consome o SDK `br.com.coffeemail:coffeemail-java`. Quando o repositório `coffee-mail-sdk-java` existe ao lado do workbench, o Gradle usa o código local via composite build; caso contrário, resolve a versão publicada no Maven Central. Além de `x-coffeemail-api-key`, ele respeita o cabeçalho opcional `x-coffeemail-base-url` (SPEC §5.1).
+
+```bash
+pnpm dev:runner-java   # requer JDK 17+; o Gradle provisiona o JDK 21
+pnpm test:jvm          # testes de integração do runner
+```
+
+---
+
+## 🔌 Adicionando um Novo Runner (ex: Go)
 
 Para adicionar um novo runner ao ecossistema do Workbench:
 
 1. Crie o diretório em `backends/runner-<linguagem>` (ex: `backends/runner-go`).
 2. Implemente os endpoints HTTP definidos rigorosamente na especificação [`specs/openapi.json`](./specs/openapi.json) (prefixados em `/api/v1/*`).
 3. Extraia o cabeçalho `x-coffeemail-api-key` em cada requisição para instanciar o cliente do SDK dinamicamente.
-4. Configure a porta de execução (ex: `4003` para Go).
+4. Configure a porta de execução (ex: `4004` para Go).
 5. Cadastre o novo runner na constante `DEFAULT_RUNNERS` em `apps/web/src/constants/ui-strings.ts`.
 
 ---

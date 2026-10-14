@@ -12,11 +12,19 @@
     },
     {
       "url": "http://localhost:4002",
-      "description": "Runner Python Local (Futuro)"
+      "description": "Runner Python Local"
     },
     {
       "url": "http://localhost:4003",
-      "description": "Runner Go Local (Futuro)"
+      "description": "Runner PHP Local"
+    },
+    {
+      "url": "http://localhost:4004",
+      "description": "Runner Go Local (Planejado)"
+    },
+    {
+      "url": "http://localhost:4005",
+      "description": "Runner Java Local"
     }
   ],
   "components": {

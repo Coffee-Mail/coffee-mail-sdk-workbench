@@ -1,4 +1,4 @@
-export type RunnerLanguage = "node" | "python" | "go" | "java";
+export type RunnerLanguage = "node" | "python" | "php" | "go" | "java";
 
 export type RunnerStatus = "online" | "degraded" | "offline";
 
