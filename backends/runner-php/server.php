@@ -27,7 +27,7 @@ function getRunnerInfo(): array
     return [
         'language' => 'php',
         'runtime' => 'PHP ' . PHP_VERSION,
-        'sdkVersion' => '0.1.0',
+        'sdkVersion' => \CoffeeMail\Version::VALUE,
         'status' => 'online',
     ];
 }
@@ -182,7 +182,7 @@ try {
         $client = getClient($startTime);
         $body = getJsonBody();
         $vars = isset($body['variables']) && is_array($body['variables']) ? $body['variables'] : [];
-        [$data, $error] = $client->templates->preview($matches[1], $vars);
+        [$data, $error] = $client->templates->previewById($matches[1], $vars);
         respond($data, $error, $startTime);
     }
 
@@ -207,7 +207,7 @@ try {
             respond($data, $error, $startTime);
         }
         if ($method === 'POST') {
-            [$data, $error] = $client->audiences->addContact($matches[1], getJsonBody());
+            [$data, $error] = $client->audiences->createContact($matches[1], getJsonBody());
             respond($data, $error, $startTime);
         }
     }
